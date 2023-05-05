@@ -12,6 +12,11 @@ PollFn  代表这是一个 async 函数,通常是 poll_fn 的返回值
 
 > Poll：Ready、Pending;  Promise的状态是否为可用了, 对应 v8的 PromiseState，Pending、Fulfilled、Rejected
 
+## 宏 Macro
+
+> #[op] 主要负责 op 函数的入参、返参的序列化反序列化，不需要我们自己在 v8::Local<Value> 和 Rust类型之间做转换
+> #[op] 还允许直接在 Extension 中添加 async fn
+
 ## Function
 
 #### 加载&执行
