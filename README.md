@@ -59,6 +59,11 @@ PollFn  代表这是一个 async 函数,通常是 poll_fn 的返回值
 处理js的 Promise 异步函数，等待 Promise 执行返回；
 内部调用 poll_value
 
+> call_and_await
+调用 js中的异步函数，并等待 Promise 执行返回；
+
+
+
 ## Other
 
 > resolve_import
