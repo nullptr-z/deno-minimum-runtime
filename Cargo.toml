@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name="deno_minimum_runtime"
+path="lib.rs"
+
+[[example]]
+name = "runtime"
+path = "examples/runtime.rs"
+
 [dependencies]
 deno_core = "0.180.0"
 tokio = { version = "1.28.0", features = ["full"] }
