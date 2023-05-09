@@ -1,38 +1,17 @@
-use std::rc::Rc;
-
-use deno_core::{
-    anyhow::Result, resolve_url_or_path, Extension, FsModuleLoader, JsRuntime, ModuleCode,
-    RuntimeOptions,
-};
-use deno_minimum_runtime::ops::log::log;
-
-#[allow(dead_code)]
-static OPS_NAME: &str = "ops_name";
+use deno_core::{anyhow::Result, resolve_url_or_path};
+use deno_minimum_runtime::create_runtime;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // let loader = MockLoader::new();
-    let options = RuntimeOptions {
-        module_loader: Some(Rc::new(FsModuleLoader)),
-        extensions: vec![Extension::builder("log").ops(vec![log::decl()]).build()],
-        ..Default::default()
-    };
-    let mut runtime = JsRuntime::new(options);
-
-    runtime.execute_script(
-        OPS_NAME,
-        ModuleCode::from_static(include_str!("../snapshot/js/log.js")),
-    )?;
-
+    let mut runtime = create_runtime()?;
     let js_file_path = &format!("{}/js/hello.js", env!("CARGO_MANIFEST_DIR"));
     // 传入 url 或者 path
     // 如果是 url 则使用 url；-- 内部使用 specifier_has_uri_scheme 验证
     // 如果不是则使用 path
     let js_file_url = resolve_url_or_path(&"", js_file_path.as_ref())?;
     let module_id = runtime.load_main_module(&js_file_url, None).await?;
-    // .expect(&format!(
-    //     "failed loaded load_main_module, module file: {js_file_url:}"
-    // ));
+
     let mut received = runtime.mod_evaluate(module_id);
     loop {
         tokio::select! {

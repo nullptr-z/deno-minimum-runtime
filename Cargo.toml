@@ -9,6 +9,11 @@ edition = "2021"
 name="deno_minimum_runtime"
 path="lib.rs"
 
+
+# [[bin]]
+# name="deno_minimum_snapshot"
+# path="snapshot/lib.rs"
+
 [[example]]
 name = "runtime"
 path = "examples/runtime.rs"
