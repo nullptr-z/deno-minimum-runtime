@@ -1,9 +1,13 @@
 use std::rc::Rc;
 
 use deno_core::{
-    anyhow::Result, resolve_url_or_path, Extension, FsModuleLoader, JsRuntime, RuntimeOptions,
+    anyhow::Result, resolve_url_or_path, Extension, FsModuleLoader, JsRuntime, ModuleCode,
+    RuntimeOptions,
 };
 use deno_minimum_runtime::ops::log::log;
+
+#[allow(dead_code)]
+static OPS_NAME: &str = "ops_name";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,13 +18,10 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
     let mut runtime = JsRuntime::new(options);
-    runtime.execute_script_static(
-        "filename.js",
-        r#"
-        function log(args) {
-            Deno.core.ops.log("log", args);
-        }
-    "#,
+
+    runtime.execute_script(
+        OPS_NAME,
+        ModuleCode::from_static(include_str!("../snapshot/js/log.js")),
     )?;
 
     let js_file_path = &format!("{}/js/hello.js", env!("CARGO_MANIFEST_DIR"));
