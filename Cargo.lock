@@ -58,6 +58,7 @@ name = "deno-minimum-runtime"
 version = "0.1.0"
 dependencies = [
  "deno_core",
+ "lazy_static",
  "tokio",
 ]
 
