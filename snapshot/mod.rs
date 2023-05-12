@@ -1,4 +1,4 @@
-use deno_core::{include_ascii_string, Extension, JsRuntime, RuntimeOptions};
+use deno_core::{Extension, JsRuntime, RuntimeOptions};
 use std::fs::{self, DirEntry};
 use std::path::Path;
 

@@ -3,7 +3,7 @@ pub mod snapshot;
 
 use std::rc::Rc;
 
-use deno_core::{anyhow::Result, FsModuleLoader, JsRuntime, RuntimeOptions, Snapshot};
+use deno_core::{anyhow::Result, Extension, FsModuleLoader, JsRuntime, RuntimeOptions};
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -16,14 +16,15 @@ lazy_static! {
     };
 }
 
-pub fn create_runtime() -> Result<JsRuntime> {
+pub fn create_runtime(ext: Vec<Extension>) -> Result<JsRuntime> {
     // let snapshot_bytes: &'static [u8] = include_bytes!("./snapshot.bin");
     // let a = &*SNAPSHOT;
     // let snapshot = Snapshot::Static(&*SNAPSHOT);
 
     let options = RuntimeOptions {
         module_loader: Some(Rc::new(FsModuleLoader)),
-        startup_snapshot: Some(Snapshot::Static(&*SNAPSHOT)),
+        extensions: ext,
+        // startup_snapshot: Some(Snapshot::Static(&*SNAPSHOT)),
         ..Default::default()
     };
 

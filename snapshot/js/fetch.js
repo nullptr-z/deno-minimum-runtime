@@ -1,4 +1,5 @@
+Deno.core.print("package fetch\n\n");
 
-async function fetch() {
-  print("fetch")
+async function fetch(url, method = "GET", headers, body) {
+  Deno.core.opAsync("fetch", { url, method, headers, body })
 }

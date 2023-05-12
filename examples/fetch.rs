@@ -1,11 +1,24 @@
-use deno_core::{anyhow::Result, resolve_url_or_path};
-use deno_minimum_runtime::create_runtime;
+use deno_core::{anyhow::Result, include_ascii_string, resolve_url_or_path, Extension};
+use deno_minimum_runtime::{create_runtime, ops::fetch};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // let loader = MockLoader::new();
-    let mut runtime = create_runtime(vec![])?;
-    let js_file_path = &format!("{}/js/hello.js", env!("CARGO_MANIFEST_DIR"));
+    let ext = Extension::builder("snapshot")
+        .ops(vec![fetch::fetch::decl()])
+        .build();
+    let mut runtime = create_runtime(vec![ext])?;
+
+    // #region 加载op
+    // let exec_source = format!("globalThis.exec({request_value})").into();
+    // runtime.execute_script_static(specifier, code);
+
+    runtime
+        .execute_script("log", include_ascii_string!("../snapshot/js/fetch.js"))
+        .expect("Failed execute function the execute_script");
+    // #endregion
+
+    let js_file_path = &format!("{}/js/fetch.js", env!("CARGO_MANIFEST_DIR"));
     // 传入 url 或者 path
     // 如果是 url 则使用 url；-- 内部使用 specifier_has_uri_scheme 验证
     // 如果不是则使用 path
