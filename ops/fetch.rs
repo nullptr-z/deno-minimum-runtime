@@ -1,10 +1,15 @@
+use std::str::FromStr;
+
 use deno_core::{anyhow::Result, op, serde, serde_json::Value};
-use reqwest::{header::HeaderMap, Body, Client, Method, Url};
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Body, Client, Method, Url,
+};
 use serde::{Deserialize, Serialize};
 
 #[op]
 pub async fn fetch(params: Value) -> Result<ResponseProfile> {
-    println!("【 params 】==> {:?}", params);
+    // println!("【 params 】==> {:?}", params);
     let rpf = RequestProfile::json_into(params).unwrap();
 
     // println!("【 req 】==> {:?}", req);
@@ -53,11 +58,69 @@ pub struct RequestProfile {
 impl RequestProfile {
     pub fn json_into(params: Value) -> Result<RequestProfile> {
         let mut headers = HeaderMap::new();
-        let mut body: &str = "";
+        let mut url: String = Default::default();
+        let mut method: String = "GET".to_string();
+        let mut body: String = Default::default();
+        let mut query = None;
 
         let params = params.as_object().unwrap();
+        for (k, v) in params {
+            println!("【 k.as_str() 】==> {:?}", k.as_str());
+            match k.as_str() {
+                "url" => {
+                    url = v.to_string();
+                    println!("【 url 】==> {url}");
+                }
+                "method" => {
+                    let v = v.to_string();
+                    if v.is_empty() {
+                        method = v;
+                    }
+                    println!("【 method 】==> {:?}", method);
+                }
+                "headers" => {
+                    headers = value_to_hasmap(v.clone()).unwrap();
+                    println!("【 headers 】==> {:?}", headers);
+                }
+                "body" => {
+                    body = v.to_string();
+                    println!("【 body 】==> {:?}", body);
+                }
+                "query" => {
+                    query = Some(v.clone());
+                }
+                other => {
+                    println!("Incompatible reqeust options: {other:?}");
+                }
+            }
+        }
 
-        todo!()
+        let rpf = RequestProfile {
+            url: Url::parse(&"https://dummyjson.com/products/1")
+                .expect("error url convert to type of Url"),
+            method: Method::from_str(method.as_str())
+                .expect("error call foucntion method::from_str"),
+            headers,
+            body: body.into(),
+            query,
+        };
+
+        Ok(rpf)
+    }
+}
+
+fn value_to_hasmap(value: Value) -> Option<HeaderMap> {
+    if let Some(map) = value.as_object() {
+        let mut result = HeaderMap::new();
+        for (key, value) in map {
+            result.insert(
+                HeaderName::from_str(key.clone().as_str()).unwrap(),
+                HeaderValue::from_str(&value.clone().to_string()).unwrap(),
+            );
+        }
+        Some(result)
+    } else {
+        None
     }
 }
 
