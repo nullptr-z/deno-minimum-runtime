@@ -1,5 +1,16 @@
 Deno.core.print("package fetch\n\n");
 
-async function fetch(url, method, headers, body) {
-  return Deno.core.opAsync("fetch", { url, method, headers, body })
-}
+((window) => {
+
+  async function fetch(params) {
+    if (typeof params === 'string') {
+      return await Deno.core.opAsync("fetch", { url: params, method: 'get' })
+    } else if (typeof params === 'object') {
+      return await Deno.core.opAsync("fetch", params)
+    } else {
+      throw Error("the request params type is error")
+    }
+  }
+
+  window.fetch = fetch
+})(this)

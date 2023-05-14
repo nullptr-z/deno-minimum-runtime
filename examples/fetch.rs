@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
     // runtime.execute_script_static(specifier, code);
 
     runtime
-        .execute_script("log", include_ascii_string!("../snapshot/js/fetch.js"))
+        .execute_script("fetch", include_ascii_string!("../snapshot/js/fetch.js"))
         .expect("Failed execute function the execute_script");
     // #endregion
 
@@ -24,12 +24,12 @@ async fn main() -> Result<()> {
     // 如果不是则使用 path
     let js_file_url = resolve_url_or_path(&"", js_file_path.as_ref())?;
     let module_id = runtime.load_main_module(&js_file_url, None).await?;
-
     let mut received = runtime.mod_evaluate(module_id);
+
     loop {
         tokio::select! {
             resolved = &mut received=>{
-               return resolved.expect("failed to evaluate module`无法评估模块");
+               return resolved.expect("failed to evaluate module`失败的 evaluate");
             }
             _=runtime.run_event_loop(false)=>{
                 // received.await.expect("failed to rvaluate module")?;
@@ -38,4 +38,16 @@ async fn main() -> Result<()> {
     }
 
     // Ok(())
+}
+
+#[test]
+mod tests {
+    use deno_core::serde_json::Value;
+    use deno_minimum_runtime::ops::fetch::fetch;
+
+    #[tokio::main]
+    async fn main() {
+        let res = fetch::call(Value::Null).await.unwrap();
+        println!("【 ressssssssss 】==> {:?}", res);
+    }
 }

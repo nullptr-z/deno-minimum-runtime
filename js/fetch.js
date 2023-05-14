@@ -1,9 +1,9 @@
 
-(async function fetch_reqwest() {
-  const a = await fetch('https://dummyjson.com/products/1')
-    .then(res => Deno.core.print(`123`))
-    .then(json => Deno.core.print(json))
+async function fetch_reqwest() {
+  // const a = await
+  return await fetch({ url: 'https://dummyjson.com/products/1', headers: { token: "abcd" }, method: 'gets' })
+  // .then(res => Deno.core.print(123))
+  // .then(json => Deno.core.print(json))
+}
 
-  Deno.core.print(`123${a}`)
-
-})()
+await fetch_reqwest()
