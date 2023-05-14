@@ -136,7 +136,6 @@ fn value_to_hasmap(value: Value) -> Option<HeaderMap> {
     }
 }
 
-// fn serialize_body<S>(body: &Body, serializer: S) -> Result<S::Ok, S::Error>
 fn deserialize_to_method<'de, D>(des: D) -> Result<Method, D::Error>
 where
     D: serde::Deserializer<'de>,
