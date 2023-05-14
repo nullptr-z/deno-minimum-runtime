@@ -1,9 +1,14 @@
 
 async function fetch_reqwest() {
-  // const a = await
-  return await fetch({ url: 'https://dummyjson.com/products/1', headers: { token: "abcd" }, method: 'gets' })
-  // .then(res => Deno.core.print(123))
-  // .then(json => Deno.core.print(json))
+  return await fetch({
+    url: 'https://dummyjson.com/products/add&a=1&b=2',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: 'BMW Pencil',
+    })
+  })
 }
 
-await fetch_reqwest()
+const res = await fetch_reqwest()
+Deno.core.print(JSON.stringify(res, null, 2))

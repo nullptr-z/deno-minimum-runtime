@@ -1,14 +1,19 @@
-use std::str::FromStr;
+use std::str::{Bytes, FromStr};
 
-use deno_core::{anyhow::Result, op, serde, serde_json::Value, ZeroCopyBuf};
+use deno_core::{
+    anyhow::Result,
+    op, serde,
+    serde_json::{self, json, Value},
+    ZeroCopyBuf,
+};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Body, Client, Method, Request, RequestBuilder, Url,
 };
-use serde::{de::Visitor, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[op]
-pub async fn fetch(rep: RequestProfile) -> Result<ResponseProfile> {
+pub async fn fetch(rpf: RequestProfile) -> Result<ResponseProfile> {
     // println!("【 params 】==> {:?}", params);
     // let rpf = RequestProfile::json_into(params).unwrap();
 
@@ -19,17 +24,27 @@ pub async fn fetch(rep: RequestProfile) -> Result<ResponseProfile> {
 
     // // 创建请求
     let client = Client::new();
-    let req = rep.build_request(client)?;
-    println!("【 req 】==> {:?}", req);
+    let req = build_request_for_profile(rpf, client)?;
+    // println!("【 req 】==> {:?}", req);
 
     // tokio::spawn(async move {
     let res = req.send().await?; //.expect("error is run spawn task");
-    println!("【 res 】==> {:?}", res);
-    // });
+                                 // println!("【 res 】==> {:?}", res);
+                                 // });
+    let status = res.status().as_u16();
+    let headers = res.headers().clone();
 
-    Ok(ResponseProfile {
-        status: res.status().as_u16(),
-    })
+    let text = res.text().await?;
+    let body = json!(&text);
+    println!("【 text 】==> {:?}", text);
+    let ress = ResponseProfile {
+        status,
+        headers,
+        body: Some(body),
+    };
+
+    // println!("【 text 】==> {:?}", text);
+    Ok(ress)
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,30 +59,52 @@ pub struct RequestProfile {
     )]
     headers: HeaderMap,
     // POST、PUT, 经常可能会有二进制，或者长字节流等类型，所以不建议对他序列化
-    // #[serde(
-    //     serialize_with = "serialize_body",
-    //     deserialize_with = "deserialize_body"
-    // )]
-    body: Option<ZeroCopyBuf>,
+    body: Option<Value>,
+    // body: Option<ZeroCopyBuf>,
     // GET
     #[serde(skip_serializing_if = "empty_json_value", default)]
     pub query: Option<Value>,
 }
 
+pub fn build_request_for_profile(rpf: RequestProfile, client: Client) -> Result<RequestBuilder> {
+    let url = Url::parse(&rpf.url)?;
+    // let body = Vec::from(&*body);
+    let req = client
+        .request(rpf.method, url)
+        .headers(rpf.headers)
+        .query(&rpf.query);
+
+    let req = if let Some(body) = rpf.body {
+        let body = match body {
+            Value::String(s) => {
+                println!("【 String 】==> {:?}", s);
+                s.into_bytes().into()
+            }
+            Value::Object(o) => {
+                println!("【 Object 】==> {:?}", o);
+                let body = serde_json::to_string(&o).expect("error Object");
+
+                body.into_bytes().into()
+            }
+            Value::Array(a) => {
+                println!("【 Array 】==> {:?}", a);
+                let body = Body::from(serde_json::to_string(&a)?);
+
+                body
+            }
+            _ => vec![].into(),
+        };
+
+        println!("【 body 】==> {:?}", body);
+        req.body(body)
+    } else {
+        req
+    };
+
+    Ok(req)
+}
+
 impl RequestProfile {
-    pub fn build_request(&self, client: Client) -> Result<RequestBuilder> {
-        println!("【 self.headers 】==> {:?}", self.headers);
-        // let method = Method::from_str(self.method.to_ascii_uppercase().as_str())?;
-        let url = Url::parse(&self.url)?;
-        let req = client.request(self.method.clone(), url)
-        .headers(self.headers.clone())
-        // .body(self.body.unwrap())
-        // .query(&self.query);
-        ;
-
-        Ok(req)
-    }
-
     // pub fn json_into(params: Value) -> Result<RequestProfile> {
     //     let mut headers = HeaderMap::new();
     //     let mut url: String = Default::default();
@@ -155,11 +192,16 @@ fn default_method() -> Method {
     Method::GET
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ResponseProfile {
     status: u16,
-    // headers: Option<Value>,
-    // body: Option<Value>,
+    #[serde(
+        skip_serializing_if = "HeaderMap::is_empty",
+        with = "http_serde::header_map",
+        default
+    )]
+    headers: HeaderMap,
+    body: Option<Value>,
 }
 
 // impl From<String> for RequestProfile {
