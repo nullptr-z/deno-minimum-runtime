@@ -11,7 +11,7 @@ pub fn create_snapshot() {
         will_snapshot: true,
         // module_loader: Some(Rc::new(FsModuleLoader)),
         extensions: vec![Extension::builder("snapshot")
-            .ops(vec![log::log::decl(), fetch::fetch::decl()])
+            .ops(vec![log::log::decl(), fetch::op_fetch::decl()])
             .build()],
         ..Default::default()
     };

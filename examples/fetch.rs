@@ -1,11 +1,20 @@
-use deno_core::{anyhow::Result, include_ascii_string, resolve_url_or_path, Extension};
-use deno_minimum_runtime::{create_runtime, ops::fetch};
+use deno_core::{
+    anyhow::Result, include_ascii_string, resolve_url_or_path, Extension, ZeroCopyBuf,
+};
+use deno_minimum_runtime::{
+    create_runtime,
+    ops::{fetch, log},
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // let loader = MockLoader::new();
     let ext = Extension::builder("snapshot")
-        .ops(vec![fetch::fetch::decl()])
+        .ops(vec![
+            fetch::op_fetch::decl(),
+            log::log::decl(),
+            fetch::op_decode_utf8::decl::<ZeroCopyBuf>(),
+        ])
         .build();
     let mut runtime = create_runtime(vec![ext])?;
 
@@ -15,6 +24,10 @@ async fn main() -> Result<()> {
 
     runtime
         .execute_script("fetch", include_ascii_string!("../snapshot/js/fetch.js"))
+        .expect("Failed execute function the execute_script");
+
+    runtime
+        .execute_script("fetch", include_ascii_string!("../snapshot/js/log.js"))
         .expect("Failed execute function the execute_script");
     // #endregion
 
