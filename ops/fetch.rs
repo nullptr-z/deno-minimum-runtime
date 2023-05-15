@@ -1,4 +1,7 @@
-use std::str::{Bytes, FromStr};
+use std::{
+    collections::HashMap,
+    str::{Bytes, FromStr},
+};
 
 use deno_core::{
     anyhow::Result,
@@ -10,27 +13,22 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Body, Client, Method, Request, RequestBuilder, Url,
 };
-use serde::{Deserialize, Serialize};
+use serde::{
+    ser::{SerializeMap, SerializeStruct},
+    Deserialize, Serialize, Serializer,
+    __private::de::IdentifierDeserializer,
+};
 
 #[op]
 pub async fn fetch(rpf: RequestProfile) -> Result<ResponseProfile> {
-    // println!("【 params 】==> {:?}", params);
-    // let rpf = RequestProfile::json_into(params).unwrap();
-
-    // println!("【 req 】==> {:?}", req);
-    // 解析参数
-    // let url = Url::parse(&rpf.url);
-    // // println!("fetch RequestProfile parse {url:?}");
-
-    // // 创建请求
+    // 创建请求
     let client = Client::new();
     let req = build_request_for_profile(rpf, client)?;
-    // println!("【 req 】==> {:?}", req);
+    println!("【 req 】==> {:?}", req);
 
-    // tokio::spawn(async move {
-    let res = req.send().await?; //.expect("error is run spawn task");
-                                 // println!("【 res 】==> {:?}", res);
-                                 // });
+    let res = req.send().await?;
+    println!("【 res 】==> {:?}", res);
+
     let status = res.status().as_u16();
     let headers = res.headers().clone();
 
@@ -43,7 +41,6 @@ pub async fn fetch(rpf: RequestProfile) -> Result<ResponseProfile> {
         body: Some(body),
     };
 
-    // println!("【 text 】==> {:?}", text);
     Ok(ress)
 }
 
@@ -63,19 +60,68 @@ pub struct RequestProfile {
     // body: Option<ZeroCopyBuf>,
     // GET
     #[serde(skip_serializing_if = "empty_json_value", default)]
-    pub query: Option<Value>,
+    query: Option<Value>,
+}
+
+// #[derive(Debug, Serialize)]
+struct ToParity(HashMap<String, Value>);
+
+impl FromStr for ToParity {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        // s: "key=value&key=value"
+        let mut map = HashMap::new();
+        for pair in s.split('&') {
+            let mut kv = pair.split('=');
+            let key = kv.next().unwrap();
+            let value = kv.next().unwrap();
+            map.insert(key.to_string(), Value::String(value.to_string()));
+        }
+
+        Ok(ToParity(map))
+    }
+}
+
+impl Serialize for ToParity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map_serializer = serializer.serialize_map(Some(self.0.len()))?;
+        for (key, value) in &self.0 {
+            map_serializer.serialize_entry(key, value)?;
+        }
+        map_serializer.end()
+    }
 }
 
 pub fn build_request_for_profile(rpf: RequestProfile, client: Client) -> Result<RequestBuilder> {
     let url = Url::parse(&rpf.url)?;
-    // let body = Vec::from(&*body);
-    let req = client
-        .request(rpf.method, url)
-        .headers(rpf.headers)
-        .query(&rpf.query);
+
+    let req = client.request(rpf.method, url).headers(rpf.headers);
+
+    let req = if let Some(query) = rpf.query {
+        println!("【 query 】==> {:?}", query);
+        let query = match query {
+            Value::String(s) => {
+                let parity: ToParity = s.parse()?;
+                req.query(&parity)
+            }
+            Value::Object(o) => {
+                // 支持 Object 键值对
+                req.query(&o)
+            }
+            _ => panic!("query type not support"),
+        };
+
+        query
+    } else {
+        req
+    };
 
     let req = if let Some(body) = rpf.body {
-        let body = match body {
+        let body: Body = match body {
             Value::String(s) => {
                 println!("【 String 】==> {:?}", s);
                 s.into_bytes().into()
@@ -83,19 +129,17 @@ pub fn build_request_for_profile(rpf: RequestProfile, client: Client) -> Result<
             Value::Object(o) => {
                 println!("【 Object 】==> {:?}", o);
                 let body = serde_json::to_string(&o).expect("error Object");
-
-                body.into_bytes().into()
+                body.into()
             }
             Value::Array(a) => {
                 println!("【 Array 】==> {:?}", a);
-                let body = Body::from(serde_json::to_string(&a)?);
+                let body = serde_json::to_string(&a)?;
 
-                body
+                body.into()
             }
             _ => vec![].into(),
         };
 
-        println!("【 body 】==> {:?}", body);
         req.body(body)
     } else {
         req
