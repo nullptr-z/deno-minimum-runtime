@@ -1,5 +1,6 @@
 pub mod ops;
 pub mod snapshot;
+pub mod utils;
 
 use std::rc::Rc;
 

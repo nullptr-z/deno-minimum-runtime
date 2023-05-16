@@ -5,10 +5,7 @@ use deno_core::{
     serde_json::{self, json, Value},
     ZeroCopyBuf,
 };
-use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
-    Body, Client, Method, RequestBuilder, Url,
-};
+use reqwest::{header::HeaderMap, Body, Client, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
 use std::{collections::HashMap, ops::Deref, str::FromStr};
 
@@ -134,21 +131,6 @@ impl Serialize for ToParity {
             map_serializer.serialize_entry(key, value)?;
         }
         map_serializer.end()
-    }
-}
-
-fn value_to_hasmap(value: Value) -> Option<HeaderMap> {
-    if let Some(map) = value.as_object() {
-        let mut result = HeaderMap::new();
-        for (key, value) in map {
-            result.insert(
-                HeaderName::from_str(key.clone().as_str()).unwrap(),
-                HeaderValue::from_str(&value.clone().to_string()).unwrap(),
-            );
-        }
-        Some(result)
-    } else {
-        None
     }
 }
 
