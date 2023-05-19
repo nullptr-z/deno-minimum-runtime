@@ -2,6 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::thread;
+use std::time::Duration;
+use tokio::time::sleep;
 
 struct DelayFn<F> {
     delay: Option<std::time::Duration>,
@@ -39,14 +41,16 @@ impl<F: FnOnce() + Send + 'static> Future for DelayFn<F> {
     }
 }
 
-fn delay_fn<F: FnOnce() + Send + 'static>(
-    duration: std::time::Duration,
-    f: F,
-) -> impl Future<Output = ()> {
+fn delay_fn<F: FnOnce() + Send + 'static>(duration: Duration, f: F) -> impl Future<Output = ()> {
     DelayFn {
         delay: Some(duration),
         f: Some(Box::new(f)),
     }
+}
+
+async fn async_delay_fn<F: FnOnce() + Send + 'static>(duration: Duration, f: F) {
+    sleep(duration).await; // 内部使用了 waker 的唤醒机制，可以简化代码，无需手动调用 waker.wake_by_ref()
+    f();
 }
 
 // 通过轮询 Future 来实现异步等待；关键字 loop waker Context Pin Poll
@@ -74,17 +78,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_delay_fn() {
-        let delay = Duration::from_secs(3);
+        let delay_long = Duration::from_secs(5);
+        let delay_short = Duration::from_secs(4);
         let start = std::time::Instant::now();
 
-        delay_fn(delay, || {
-            println!("Delayed execution");
+        delay_fn(delay_long, || {
+            println!("Delayed execution delay_long");
+        })
+        .await;
+
+        delay_fn(delay_short, || {
+            println!("Delayed execution delay_short");
         })
         .await;
 
         // 计算 Instant::now() 到现在的时间间隔
         let elapsed = start.elapsed();
         // 至少已经超过了 delay 指定的时间间隔
-        assert!(elapsed >= delay);
+        assert!(elapsed >= delay_long);
     }
 }
