@@ -54,7 +54,7 @@ mod tests {
         let delay_short = Duration::from_secs(3);
         let start: Instant = Instant::now();
 
-        // spawn_local运行在当前线程中，它没有线程切换的开销，因此在处理高并发或者密集计算的情况下，spawn_local通常比spawn更高效。
+        // spawn_local运行在当前线程中，它没有线程切换的开销，因此在处理高并发或者i/o密集计算的情况下，spawn_local通常比spawn更高效。
         // 但是因单线程原因,spawn_local不适合阻塞任务和长时间占用算力的任务
         let local_set = LocalSet::new();
         local_set
